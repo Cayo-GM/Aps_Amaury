@@ -1,0 +1,42 @@
+image: php:7.3
+
+stages:
+  - build
+  - test
+  - main
+
+variables:
+  PROJECT: pdo
+  DEPLOY_PATH: /var/www/html/pdo
+
+
+before_script:
+  - apt-get update
+  - apt-get install zip unzip
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+  - mkdir -p ~/.ssh
+  - eval $(ssh-agent -s)
+  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  - composer install
+  - chmod +x vendor/bin/phpunit
+  - chmod +x vendor/phpunit/phpunit/phpunit
+  
+
+build-stage:
+  stage: build
+  script:
+    - zip -r $PROJECT.zip *
+  artifacts:
+    paths:
+      - $PROJECT.zip
+  only:
+      - main
+
+tests-stage:
+  stage: test
+  script:
+  - vendor/bin/phpunit
+  only:
+      - main
+
